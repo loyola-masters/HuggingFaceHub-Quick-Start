@@ -1,6 +1,6 @@
 # Hugging Face Hub end-to-end Tutorial
 
-- *Sections 1 to 4 are documented in the Jupyter Notebook `1_iris_classification.ipynb`*
+- *Sections 2 to 4 are documented in the Jupyter Notebook `1_iris_classification.ipynb`*
 - *Section 5 in `2_upload_dataset.ipynb`*
 - *Section 6 in `3_upload_model.ipynb`*
 - *Section 7 in script `4_gradio.ipynb`*
@@ -15,7 +15,7 @@ The notebook `1_iris_classification.ipynb` trains a Decision Tree classifier. Th
 
 ## 1. Project Setup
 1. **Create/Activate a Python Environment**  
-   - Install required packages (`pip install scikit-learn huggingface_hub datasets gradio joblib`).
+   - Install required packages
 
    ```bash
    pip install scikit-learn huggingface_hub datasets gradio joblib
@@ -24,7 +24,8 @@ The notebook `1_iris_classification.ipynb` trains a Decision Tree classifier. Th
 2. **Authenticate with Hugging Face**  
    - Create an access token on Hugging Face
       -   *Settings > Access Tokens*: Create new token, Write type
-   - Use `huggingface-cli login`, or from Python:
+   - Use `huggingface-cli login` and paste your token
+   - Alternatively, login from a Python script:
    ```python
       import huggingface_hub
       huggingface_hub.login(token=...)`
@@ -32,6 +33,8 @@ The notebook `1_iris_classification.ipynb` trains a Decision Tree classifier. Th
 ---
 
 ## 2. Loading the Iris Dataset
+You have Iris dataset available in path `./iris-HF/Iris.csv`, so you do not need to obtain it externally.
+For your reference, here are two ways to get the dataset using a Hugging Face repository ot the `datasets` library (equivalent to importing from Sklearn).
 
 1. Clone the dataset from Hugging Face hub:
    ```bash
@@ -50,7 +53,7 @@ The notebook `1_iris_classification.ipynb` trains a Decision Tree classifier. Th
      data = load_iris()
      ```
 
-1. Inspect the Data
+Afterwards inspect the Data:
    - Print feature names, shapes, target distribution, etc.
 
 ---
@@ -179,7 +182,7 @@ Refer to script `3_upload_model.ipynb`
 Refer to script `4_gradio.py`
 
 1. **Choose a Framework (Gradio/Streamlit)**  
-   - We will use Gradio, that is more focused to Machine Learning apps:
+   - We will use Gradio, that is more focused to Machine Learning apps. This is the version where we start from (that launches the Gradio app pointing to local file of the model):
      ```python
      import gradio as gr
      import joblib
@@ -200,6 +203,52 @@ Refer to script `4_gradio.py`
      if __name__ == "__main__":
          interface.launch()
      ```
+
+   Replace Gradio script with this version pointing to the model hosted in Hugging Face:
+   ```python
+   import gradio as gr
+   import joblib 
+   import numpy as np
+   from huggingface_hub import hf_hub_download
+
+   HF_TOKEN = 'hf_your_token_here'  # Replace with your actual Hugging Face token
+
+   model_path = hf_hub_download(
+    repo_id="brjapon/iris-dt",
+    filename="iris_dt.joblib",      # The model file stored in the HF repo
+    repo_type="model"               # Could also be 'dataset' if you're storing it that way
+   )
+   
+   # Load the trained model
+   pipeline = joblib.load(model_path)
+
+   # Define a function that takes the four iris measurements as input
+   # and returns the predicted iris species label.
+   def predict_iris(sepal_length, sepal_width, petal_length, petal_width):
+      # Convert the input parameters into a 2D list/array because
+      # scikit-learn's predict() expects a 2D array of shape (n_samples, n_features)
+      input = np.array([[sepal_length, sepal_width, petal_length, petal_width]])
+      prediction = pipeline.predict(input)
+      
+      # Convert the prediction to the string label
+      if prediction == 0:
+         return 'iris-setosa'
+      elif prediction == 1:
+         return 'Iris-versicolor'
+      elif prediction == 2:
+         return 'Iris-virginica'
+      else:
+         return "Invalid prediction"
+
+      interface = gr.Interface(
+    fn=predict_iris,
+    inputs=["number", "number", "number", "number"],
+    outputs="text",
+    live=True,
+    title="Iris Species Identifier",
+    description="Enter the four measurements to predict the Iris species."
+   )
+   ```
 2. **Deploying to Spaces**  
    - Create a new Space on Hugging Face (click “New Space,” choose Gradio)
    - Clone the repository:
